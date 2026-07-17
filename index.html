@@ -1,0 +1,533 @@
+slides:Neon Render Studio Pro:index.html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Minecraft Neon Render Studio Pro</title>
+    <!-- Cargamos Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --neon-blue: #00f0ff;
+            --neon-pink: #ff007f;
+            --neon-glow: 0 0 10px #00f0ff, 0 0 20px #00f0ff;
+            --bg-dark: #030712;
+            --panel-bg: rgba(9, 17, 34, 0.95);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+        }
+
+        /* --- CONTENEDOR DEL LIENZO 3D --- */
+        #canvas-container {
+            flex-grow: 1;
+            position: relative;
+            height: 100%;
+        }
+
+        #render-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* --- PANEL DE CONTROL (OPTIMIZADO PARA MÓVIL) --- */
+        #control-panel {
+            width: 360px;
+            background: var(--panel-bg);
+            border-left: 2px solid var(--neon-blue);
+            box-shadow: -5px 0 25px rgba(0, 240, 255, 0.15);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        /* Cabecera */
+        .panel-header {
+            padding: 15px;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.3rem;
+            color: var(--neon-blue);
+            text-shadow: var(--neon-glow);
+            letter-spacing: 1.5px;
+        }
+
+        /* Navegación por pestañas */
+        .tabs {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #64748b;
+            padding: 10px 5px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .tab-btn.active {
+            color: var(--neon-blue);
+            border-bottom: 2px solid var(--neon-blue);
+            background: rgba(0, 240, 255, 0.05);
+        }
+
+        /* Contenido de Pestañas */
+        .tab-content {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Elementos UI */
+        .section-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #38bdf8;
+            margin-bottom: 5px;
+            letter-spacing: 0.5px;
+            border-bottom: 1px dashed rgba(0, 240, 255, 0.2);
+            padding-bottom: 3px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        label span {
+            color: var(--neon-blue);
+            font-weight: bold;
+        }
+
+        /* Botones Android Premium */
+        button, .file-input-label {
+            background: rgba(0, 240, 255, 0.03);
+            border: 1.5px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 10px 15px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            text-shadow: 0 0 5px rgba(0,240,255,0.4);
+            transition: all 0.2s ease;
+            text-align: center;
+            display: block;
+            width: 100%;
+        }
+
+        button:active, .file-input-label:active {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: var(--neon-glow);
+            text-shadow: none;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        select {
+            background: #0b1329;
+            border: 1.5px solid rgba(0, 240, 255, 0.4);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            outline: none;
+            width: 100%;
+            font-size: 0.85rem;
+        }
+
+        /* Deslizadores */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #0f172a;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--neon-blue);
+            box-shadow: 0 0 8px var(--neon-blue);
+            cursor: pointer;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(3, 7, 18, 0.8);
+            border: 1px solid var(--neon-blue);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+        /* --- RESPONSIVE PARA ANDROID (Pantallas Verticales) --- */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column-reverse;
+            }
+
+            #control-panel {
+                width: 100%;
+                height: 45vh;
+                border-left: none;
+                border-top: 2px solid var(--neon-blue);
+                box-shadow: 0 -5px 25px rgba(0, 240, 255, 0.15);
+            }
+
+            #canvas-container {
+                height: 55vh;
+            }
+
+            #instructions {
+                top: 15px;
+                bottom: auto;
+                left: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <canvas id="render-canvas"></canvas>
+        <div id="instructions">Arrastra para rotar la cámara</div>
+    </div>
+
+    <div id="control-panel">
+        <div class="panel-header">
+            <h1>NEON RENDER PRO</h1>
+        </div>
+        
+        <!-- Pestañas de Navegación -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('skin')">Skin</button>
+            <button class="tab-btn" onclick="switchTab('pose')">Pose</button>
+            <button class="tab-btn" onclick="switchTab('effects')">Efectos</button>
+            <button class="tab-btn" onclick="switchTab('export')">Guardar</button>
+        </div>
+
+        <!-- Pestaña 1: Skin -->
+        <div id="tab-skin" class="tab-content active">
+            <div class="control-group">
+                <span class="section-title">Tu Personaje</span>
+                <label for="skin-loader" class="file-input-label">Cargar Skin (.png)</label>
+                <input type="file" id="skin-loader" accept="image/png">
+            </div>
+            
+            <div class="control-group">
+                <span class="section-title">Armamento Épico</span>
+                <label for="item-select">Sostener Objeto:</label>
+                <select id="item-select">
+                    <option value="none">Ninguno</option>
+                    <option value="sword">Espada de Diamante 3D</option>
+                    <option value="pickaxe">Pico de Diamante 3D</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <span class="section-title">Brillo de Skin (Glow)</span>
+                <label>Intensidad de Emisión: <span id="glow-val">0%</span></label>
+                <input type="range" id="glow-slider" min="0" max="100" value="0">
+            </div>
+        </div>
+
+        <!-- Pestaña 2: Poses -->
+        <div id="tab-pose" class="tab-content">
+            <div class="control-group">
+                <span class="section-title">Ajustes Rápidos</span>
+                <select id="pose-preset">
+                    <option value="standing">De Pie (Estándar)</option>
+                    <option value="action">Guardia de Batalla</option>
+                    <option value="running">Corriendo</option>
+                    <option value="flying">Superhéroe volador</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <span class="section-title">Personalización de Pose</span>
+                <label>Cabeza (Giro): <span id="head-val">0°</span></label>
+                <input type="range" id="head-slider" min="-90" max="90" value="0">
+
+                <label>Brazo Derecho (Ángulo): <span id="rarm-val">0°</span></label>
+                <input type="range" id="rarm-slider" min="-180" max="180" value="0">
+
+                <label>Brazo Izquierdo (Ángulo): <span id="larm-val">0°</span></label>
+                <input type="range" id="larm-slider" min="-180" max="180" value="0">
+
+                <label>Pierna Derecha: <span id="rleg-val">0°</span></label>
+                <input type="range" id="rleg-slider" min="-90" max="90" value="0">
+
+                <label>Pierna Izquierda: <span id="lleg-val">0°</span></label>
+                <input type="range" id="lleg-slider" min="-90" max="90" value="0">
+            </div>
+        </div>
+
+        <!-- Pestaña 3: Efectos -->
+        <div id="tab-effects" class="tab-content">
+            <div class="control-group">
+                <span class="section-title">Estudio de Luces</span>
+                <label for="light-theme">Ambiente Lumínico:</label>
+                <select id="light-theme">
+                    <option value="cyberpunk">Cyberpunk (Azul & Rosa)</option>
+                    <option value="nether">Portal Nether (Púrpura & Fuego)</option>
+                    <option value="gold">Cálido Cinematic (Oro)</option>
+                    <option value="toxic">Slime Radioactivo (Verde)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <span class="section-title">Filtros y Sombras</span>
+                <button id="btn-shadows">Sombras Suaves: ON</button>
+                <button id="btn-bloom" style="margin-top: 5px;">Ráfaga de Luz</button>
+            </div>
+        </div>
+
+        <!-- Pestaña 4: Guardar -->
+        <div id="tab-export" class="tab-content">
+            <div class="control-group">
+                <span class="section-title">Configuración de Fondo</span>
+                <select id="bg-select">
+                    <option value="neon">Fondo Espacial Neón</option>
+                    <option value="transparent">Fondo Transparente (Render Puro)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <span class="section-title">Resolución final</span>
+                <select id="res-select">
+                    <option value="64">Minecraft Clásico (64x)</option>
+                    <option value="128">HD Render (128x)</option>
+                    <option value="512">Super Alta Definición (512x)</option>
+                    <option value="1024">Ultra 4K Render (1024x)</option>
+                </select>
+                <button id="btn-save" style="margin-top: 15px; border-color: var(--neon-pink); color: var(--neon-pink); text-shadow: 0 0 5px rgba(255,0,127,0.4);">GUARDAR RENDER</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONTROL DE PESTAÑAS ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        // --- MOTOR GRÁFICO (THREE.JS) ---
+        const canvas = document.getElementById('render-canvas');
+        const container = document.getElementById('canvas-container');
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x02040a);
+
+        const camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 100);
+        camera.position.set(0, 1.0, 4.5);
+
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, preserveDrawingBuffer: true, alpha: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        // --- SISTEMA DE ILUMINACIÓN AVANZADA ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+        scene.add(ambientLight);
+
+        // Luz principal (Key Light)
+        const keyLight = new THREE.DirectionalLight(0x00f0ff, 1.2);
+        keyLight.position.set(3, 4, 3);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width = 1024;
+        keyLight.shadow.mapSize.height = 1024;
+        keyLight.shadow.bias = -0.001;
+        scene.add(keyLight);
+
+        // Luz de relleno (Fill Light) para darle ese toque Neón
+        const fillLight = new THREE.PointLight(0xff007f, 1.5, 10);
+        fillLight.position.set(-2.5, 1.5, 2);
+        scene.add(fillLight);
+
+        // Luz trasera de contorno (Rim Light)
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        rimLight.position.set(-2, 3, -4);
+        scene.add(rimLight);
+
+        // Suelo para sombras estables
+        const floorGeo = new THREE.PlaneGeometry(15, 15);
+        const floorMat = new THREE.ShadowMaterial({ opacity: 0.5 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -1.35;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // --- SOPORTE SKIN UV SLICER (CORRECCIÓN TOTAL DEL BUG) ---
+        // Esta sección corta la plantilla de Minecraft en lienzos individuales para cada cara del personaje
+        function getFaceCanvas(img, x, y, w, h, rotate = 0, flipX = false) {
+            const faceCanvas = document.createElement('canvas');
+            faceCanvas.width = w;
+            faceCanvas.height = h;
+            const ctx = faceCanvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+
+            if (flipX) {
+                ctx.translate(w, 0);
+                ctx.scale(-1, 1);
+            }
+
+            ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
+            
+            const texture = new THREE.CanvasTexture(faceCanvas);
+            texture.magFilter = THREE.NearestFilter;
+            texture.minFilter = THREE.NearestFilter;
+            return texture;
+        }
+
+        // Estructura de mapeo UV de Minecraft para Skins de 64x64
+        function buildSlicers(img) {
+            const isOldSkin = img.height === 32;
+
+            const mapLimb = (ox, oy, w, h) => [
+                getFaceCanvas(img, ox + w*2, oy + w, w, h),     // Derecha (+X)
+                getFaceCanvas(img, ox, oy + w, w, h),           // Izquierda (-X)
+                getFaceCanvas(img, ox + w, oy, w, w),           // Arriba (+Y)
+                getFaceCanvas(img, ox + w*2, oy, w, w),         // Abajo (-Y)
+                getFaceCanvas(img, ox + w, oy + w, w, h),       // Frente (+Z)
+                getFaceCanvas(img, ox + w*3, oy + w, w, h)      // Atrás (-Z)
+            ];
+
+            // 1. Cabeza (0, 0)
+            const headMats = mapLimb(0, 0, 8, 8).map(tex => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }));
+            
+            // 2. Torso (16, 16)
+            const bodyMats = [
+                getFaceCanvas(img, 16, 20, 4, 12), // Derecha
+                getFaceCanvas(img, 28, 20, 4, 12), // Izquierda
+                getFaceCanvas(img, 20, 16, 8, 4),  // Arriba
+                getFaceCanvas(img, 28, 16, 8, 4),  // Abajo
+                getFaceCanvas(img, 20, 20, 8, 12), // Frente
+                getFaceCanvas(img, 32, 20, 8, 12)  // Atrás
+            ].map(tex => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }));
+
+            // 3. Brazo Derecho (40, 16)
+            const rarmMats = [
+                getFaceCanvas(img, 40, 20, 4, 12), // Derecha
+                getFaceCanvas(img, 48, 20, 4, 12), // Izquierda
+                getFaceCanvas(img, 44, 16, 4, 4),  // Arriba
+                getFaceCanvas(img, 48, 16, 4, 4),  // Abajo
+                getFaceCanvas(img, 44, 20, 4, 12), // Frente
+                getFaceCanvas(img, 52, 20, 4, 12)  // Atrás
+            ].map(tex => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }));
+
+            // 4. Brazo Izquierdo (Mapeado nuevo 64x64 o clonado si es 64x32)
+            let larmMats;
+            if (isOldSkin) {
+                larmMats = rarmMats; // Si es clásica clonamos
+            } else {
+                larmMats = [
+                    getFaceCanvas(img, 32, 52, 4, 12),
+                    getFaceCanvas(img, 40, 52, 4, 12),
+                    getFaceCanvas(img, 36, 48, 4, 4),
+                    getFaceCanvas(img, 40, 48, 4, 4),
+                    getFaceCanvas(img, 36, 52, 4, 12),
+                    getFaceCanvas(img, 44, 52, 4, 12)
+                ].map(tex => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }));
+            }
+
+            // 5. Pierna Derecha (0, 16)
+            const rlegMats = [
+                getFaceCanvas(img, 0, 20, 4, 12),
+                getFaceCanvas(img, 8, 20, 4, 12),
+                getFaceCanvas(img, 4, 16, 4, 4),
+                getFaceCanvas(img, 8, 16, 4, 4),
+                getFaceCanvas(img, 4, 20, 4, 12),
+                getFaceCanvas(img, 12, 20, 4, 12)
+            ].map(tex => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }));
+
+            // 6. Pierna Izquierda
+            let llegMats;
+            if (isOldSkin) {
+                llegMats = rlegMats;
+            } else {
+                llegMats = [
+                    getFaceCanvas(img, 16, 52, 4, 12),
+                    getFaceCanvas(img, 24, 52, 4, 12),
+                    getFaceCanvas(img, 20, 48, 4, 4),
+                    getFaceCanvas(img, 24, 48, 4, 4),
+                    getFaceCanvas(img, 20, 52, 4, 12),
+                    getFaceCanvas(img, 28, 52, 4, 12)
+                ].map(tex => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }));
+            }
+
+            return { headMats, bodyMats, rarmMats, larmMats, rlegMats, llegMats };
+        }
+
+        // --- CONSTRUCCIÓN DE MODELOS DE EXTREMIDADES ---
+        const modelGroup = new THREE.Group();
+        scene.add(modelGroup);
+
+        const headPivot = new THREE.Group(); headPivot.position.y = 0.6; modelGroup.add(headPivot);
+        const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), []);
+        headMesh.position.y = 0.4; headMesh.castShadow = true; headPivot.add(headMesh);
+
+        const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.4), []);
+        bodyMesh.position.y = 0; bodyMesh.castShadow = true; bodyMesh.receiveShadow = true; modelGroup.add(bodyMesh);
+
+        const rarmPivot = new THREE.Group(); rarmPivot.position.set(0.6, 0.5, 0); modelGroup.add(r
